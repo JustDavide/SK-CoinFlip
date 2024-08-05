@@ -1,0 +1,142 @@
+# Depends on: SKBee (TabCompletions) | skript-gui (GamesGUI)
+
+command /coinflip <text> [<text>] [<text>]:
+    aliases: /cf
+    executable by: players
+    usage: &c&lCF &7Use: /coinflip <create/games/join/delete> [stake] [heads/tails]
+    trigger:
+        if arg 1 is "create":
+
+            if arg 2 is not set:
+                send "&c&lCF &7You have to specify a stake." to player
+                stop
+
+            if arg 3 is not set:
+                send "&c&lCF &7You have to specify a side (heads/tails)." to player
+                stop
+
+            if arg 3 is not "tails" or "heads":
+                send "&c&lCF &7You can only choose heads or tails" to player
+                stop
+
+            if {game::%player's name%::3} is true:
+                send "&c&lCF &7You already have a running game." to player
+                stop
+
+            set {_bet} to arg 2 parsed as number
+
+            if {_bet} is not a number:
+                send "&c&lCF &7You have to specify a valid number" to player
+                stop
+
+            if {_bet} > player's balance:
+                send "&c&lCF &7You don't have enough coins to bet." to player
+                stop
+
+            remove {_bet} from player's balance
+            
+            send "&a&lCF &7Game created. Waiting for a player to join" to player
+
+            set {game::%player's name%::1} to player's name
+            set {game::%player's name%::2} to {_bet}
+            set {game::%player's name%::3} to true
+            set {game::%player's name%::4} to arg 3
+
+            add {game::%player's name%::1} to {gameList::*}
+
+        else if arg 1 is "delete":
+
+            if {game::%player's name%::3} is not set:
+                send "&c&lCF &7You don't have a running game" to player
+                stop
+
+            if {game::%player's name%::3} is false:
+                send "&c&lCF &7You don't have a running game" to player
+                stop
+
+            remove {game::%player's name%::*} from {gameList::*}
+            delete {game::%player's name%::*}
+
+            send "&a&lCF &7Game deleted. You have been refunded"
+        
+        else if arg 1 is "join":
+            if arg 2 is not set:
+                send "&c&lCF &7You have to specify a player"
+                stop
+
+            set {_p2} to arg 2 parsed as player
+            if {_p2} is not online:
+                send "&c&lCF &7This player is not online"
+                stop
+
+            if {_p2} is player:
+                send "&c&lCF &7You cannot join yourself"
+                stop
+
+            if {game::%{_p2}'s name%::3} is not set:
+                send "&c&lCF &7This player does not have any games" to player
+                stop
+
+            if {game::%{_p2}'s name%::2} > player's balance:
+                send "&c&lCF &7You don't have enough coins to bet." to player
+                stop
+
+            set {_win} to {game::%{_p2}'s name%::2} * 2
+            set {_cf} to random integer between 1 and 2
+
+            remove {game::%{_p2}'s name%::2} from player's balance
+
+            send "&a&lCF &7You joined %{_p2}'s name% coinflip" to player
+
+            set {coin::1} to "heads"
+            set {coin::2} to "tails"
+
+            if {coin::%{_cf}%} is {game::%{_p2}'s name%::4}:
+                send "&c&lUNFORTUNATE! &7You lost." to player
+                send "&a&lLUCKY! &7You won!!!" to {_p2}
+
+                add {_win} to {_p2}'s balance
+            else:
+                send "&c&lUNFORTUNATE! &7You lost." to {_p2}
+                send "&a&lLUCKY! &7You won!!!" to player
+
+                add {_win} to player's balance
+            
+            remove {game::%{_p2}'s name%::*} from {gameList::*}
+            delete {game::%{_p2}'s name%::*}
+        
+        else if arg 1 is "games":
+
+            if {gameList::*} is not set:
+                send "&c&lCF &7There are currently no games" to player
+                stop
+
+            
+            create a new gui with virtual chest inventory with 4 rows named "&eCoinFlip Games":
+                loop {gameList::*}:
+                    set {_player} to loop-value parsed as offline player
+                    make next gui with skull of {_player} with name "&7%{_player}%" with lore "&6Stake: &e%{game::%{_player}'s name%::2}% %nl%&6Side: &e%{game::%{_player}'s name%::4}%":
+                        # on click
+                        make player execute command "/cf join %{_player}%"
+                open gui to player
+                
+        else:
+            send "&c&lCF &7Argument not recognized" to player
+            stop
+
+
+command /coins:
+    trigger:
+        send "&a&lCF &7You have %player's balance% coin(s)" to player
+
+on tab complete of "/coinflip" or "/cf":
+    set tab completions for position 1 to "create", "games", "delete" and "join"
+    if tab arg 1 is "create":
+        set tab completions for position 2 to "STAKE"
+        set tab completions for position 3 to "heads" and "tails"
+    if tab arg 1 is "join":
+        set tab completions for position 2 to all players
+
+
+                
+    
